@@ -2,7 +2,9 @@ package com.fastaoe.server;
 
 import android.app.Service;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.IBinder;
+import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.support.annotation.Nullable;
 
@@ -17,7 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ServerService extends Service {
 
     private CopyOnWriteArrayList<Book> list = new CopyOnWriteArrayList<>();
-    private CopyOnWriteArrayList<IAddBookListener> listeners = new CopyOnWriteArrayList<>();
+    private RemoteCallbackList<IAddBookListener> listeners = new RemoteCallbackList<>();
 
     @Override
     public void onCreate() {
@@ -29,6 +31,10 @@ public class ServerService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
+        int check = checkCallingOrSelfPermission("com.fastaoe.server.permission.ACCESS_BOOK_SERVICE");
+        if (check == PackageManager.PERMISSION_DENIED) {
+            return null;
+        }
         return binder;
     }
 
@@ -46,23 +52,22 @@ public class ServerService extends Service {
 
         @Override
         public void registerListener(IAddBookListener listener) throws RemoteException {
-            if (!listeners.contains(listener)) {
-                listeners.add(listener);
-            }
+            listeners.register(listener);
         }
 
         @Override
         public void unregisterListener(IAddBookListener listener) throws RemoteException {
-            if (listeners.contains(listener)) {
-                listeners.remove(listener);
-            }
+            listeners.unregister(listener);
         }
     };
 
     private void onNewBookAdd(Book book) throws RemoteException {
         list.add(book);
-        for (IAddBookListener listener : listeners) {
-            listener.OnNewBookAddListener(book);
+        int N = listeners.beginBroadcast();
+        for (int i = 0; i < N; i++) {
+            IAddBookListener broadcastItem = listeners.getBroadcastItem(i);
+            broadcastItem.OnNewBookAddListener(book);
         }
+        listeners.finishBroadcast();
     }
 }

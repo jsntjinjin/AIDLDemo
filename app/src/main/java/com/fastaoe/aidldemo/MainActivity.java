@@ -27,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     private int index = 3;
 
-    Handler handler = new Handler(){
+    Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -82,6 +82,7 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (iBookManager != null) {
                     try {
+                        // TODO: 2017/7/9 放在子线程中
                         list = iBookManager.getListBook();
                     } catch (RemoteException e) {
                         e.printStackTrace();
@@ -95,9 +96,10 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if (iBookManager != null) {
-                    Book book = new Book(index, "图书"+ index);
+                    Book book = new Book(index, "图书" + index);
                     index += 1;
                     try {
+                        // TODO: 2017/7/9 放在子线程中
                         iBookManager.addBook(book);
                     } catch (RemoteException e) {
                         e.printStackTrace();
@@ -109,13 +111,16 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = new Intent();
         intent.setAction("com.fastaoe.server.ServerService");
         intent.setComponent(new ComponentName("com.fastaoe.server", "com.fastaoe.server.ServerService"));
+        //intent.setClassName("com.fastaoe.server", "com.fastaoe.server.ServerService");
         bindService(intent, conn, Context.BIND_AUTO_CREATE);
     }
 
     @Override
     protected void onDestroy() {
         try {
-            iBookManager.unregisterListener(listener);
+            if (iBookManager != null) {
+                iBookManager.unregisterListener(listener);
+            }
         } catch (RemoteException e) {
             e.printStackTrace();
         }
